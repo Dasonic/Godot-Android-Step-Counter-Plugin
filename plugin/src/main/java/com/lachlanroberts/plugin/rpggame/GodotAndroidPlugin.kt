@@ -1,14 +1,21 @@
 package com.lachlanroberts.plugin.rpggame
 
-import android.util.Log
-import android.widget.Toast
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.util.Log
+import androidx.annotation.RequiresPermission
+import com.google.android.gms.fitness.FitnessLocal
+import com.google.android.gms.fitness.data.LocalDataType
+import com.google.android.gms.fitness.request.LocalDataReadRequest
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
-import org.godotengine.godot.plugin.UsedByGodot
 import org.godotengine.godot.plugin.SignalInfo
+import org.godotengine.godot.plugin.UsedByGodot
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.concurrent.TimeUnit
+import com.google.android.gms.fitness.data.LocalField
 
 class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
     companion object {
@@ -24,20 +31,23 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
         const val PERMISSION_CODE_OK = 0
 
         const val SIGNAL_PERMISSION_REQUEST_COMPLETED = "permission_request_completed"
+        const val SIGNAL_TOTAL_STEPS_RETRIEVED = "total_steps_retrieved"
     }
 
-    private val REQUEST_CODE_ACTIVITY_RECOGNITION = 100
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
     private val currentActivity: Activity = activity ?: throw IllegalStateException()
+
+    val localRecordingClient = FitnessLocal.getLocalRecordingClient(currentActivity)
 
     /**
      * Registers all the signals which the game may need to listen to
      */
     override fun getPluginSignals(): MutableSet<SignalInfo> {
         return mutableSetOf(
-            SignalInfo(SIGNAL_PERMISSION_REQUEST_COMPLETED, Any::class.java, String::class.java, Any::class.java)
+            SignalInfo(SIGNAL_PERMISSION_REQUEST_COMPLETED, Any::class.java, String::class.java, Any::class.java),
+            SignalInfo(SIGNAL_TOTAL_STEPS_RETRIEVED, Any::class.java)
         )
     }
 
@@ -98,30 +108,48 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
         }
     }
 
-    fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_CODE_ACTIVITY_RECOGNITION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted
-                Log.v(pluginName, "User granted permissions")
-            } else {
-                // Permission denied
-                // Handle the case where the user denied the permission
-                // You might want to show a message to the user explaining why the permission is needed
-                Log.v(pluginName, "User denied permissions")
+    @RequiresPermission(Manifest.permission.ACTIVITY_RECOGNITION)
+    @UsedByGodot
+    fun subscibeToFitnessData() {
+        // Subscribe to steps data
+        localRecordingClient.subscribe(LocalDataType.TYPE_STEP_COUNT_DELTA)
+            .addOnSuccessListener {
+                Log.i(pluginName, "Successfully subscribed!")
             }
+            .addOnFailureListener { e ->
+                Log.w(pluginName, "There was a problem subscribing.", e)
+            }
+    }
+
+    // Gets the amount of steps taken since TIME and emits a signal with the result
+    @UsedByGodot
+    fun getSteps() {
+        val endTime = LocalDateTime.now().atZone(ZoneId.systemDefault())
+        val startTime = endTime.minusWeeks(1)
+
+        var totalSteps = 0
+        try {
+            val readRequest = LocalDataReadRequest.Builder()
+                .read(LocalDataType.TYPE_STEP_COUNT_DELTA) // Directly read the step count data
+                .setTimeRange(startTime.toEpochSecond(), endTime.toEpochSecond(), TimeUnit.SECONDS)
+                .build()
+
+            localRecordingClient.readData(readRequest).addOnSuccessListener { response ->
+
+                for (dataSet in response.dataSets) {
+                    totalSteps += dataSet.dataPoints.sumOf { it.getValue(LocalField.FIELD_STEPS).asInt() }
+                }
+//                Log.i(pluginName, "Total steps: $totalSteps")
+                emitSignal(
+                    SIGNAL_TOTAL_STEPS_RETRIEVED,
+                    totalSteps
+                )
+            }.addOnFailureListener { e ->
+                Log.w(pluginName, "There was an error reading data", e)
+            }
+        } catch (e: Exception) {
+            Log.e(pluginName, "Exception occurred while reading data: ", e)
         }
     }
 
-//        @UsedByGodot
-//    fun subscibeToFitnessData() {
-//        val localRecordingClient = FitnessLocal.getLocalRecordingClient(this)
-//        // Subscribe to steps data
-//        localRecordingClient.subscribe(LocalDataType.TYPE_STEP_COUNT_DELTA)
-//            .addOnSuccessListener {
-//                Log.i(TAG, "Successfully subscribed!")
-//            }
-//            .addOnFailureListener { e ->
-//                Log.w(TAG, "There was a problem subscribing.", e)
-//            }
-//    }
 }

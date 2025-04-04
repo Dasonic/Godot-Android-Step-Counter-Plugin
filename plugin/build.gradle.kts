@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 21
+        minSdk = 26
 
         manifestPlaceholders["godotPluginName"] = pluginName
         manifestPlaceholders["godotPluginPackageName"] = pluginPackageName
