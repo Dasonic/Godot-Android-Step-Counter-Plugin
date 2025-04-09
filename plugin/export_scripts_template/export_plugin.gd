@@ -17,7 +17,7 @@ func _exit_tree():
 
 
 class AndroidExportPlugin extends EditorExportPlugin:
-	var _plugin_name = "RPGGameAndroidPlugin"
+	var _plugin_name = "StepCounterAndroidPlugin"
 
 	func _supports_platform(platform):
 		if platform is EditorExportPlatformAndroid:

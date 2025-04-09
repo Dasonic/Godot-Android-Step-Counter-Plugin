@@ -1,4 +1,4 @@
-package com.lachlanroberts.plugin.rpggame
+package com.lachlanroberts.plugin.stepcounter
 
 import android.Manifest
 import android.app.Activity
@@ -20,6 +20,7 @@ import com.google.android.gms.fitness.data.LocalField
 class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
     companion object {
         private const val RC_CODE = 989
+        const val permissionRequired = "android.permission.ACTIVITY_RECOGNITION"
 
         // List of constants for results of permission request
         const val PERMISSION_RESULT_GRANTED = 0
@@ -33,7 +34,6 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
         const val SIGNAL_PERMISSION_REQUEST_COMPLETED = "permission_request_completed"
         const val SIGNAL_TOTAL_STEPS_RETRIEVED = "total_steps_retrieved"
     }
-
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
@@ -51,16 +51,19 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
         )
     }
 
+    /**
+     * Checks if the passed permission is granted. Returns 0 for true and 1 or 2 for false
+     */
     @UsedByGodot
-    fun checkPermissionString(permission: String) : Int {
-        return when (currentActivity.checkSelfPermission(permission)) {
+    fun checkRequiredPermissions() : Int {
+        return when (currentActivity.checkSelfPermission(permissionRequired)) {
             PackageManager.PERMISSION_GRANTED -> {
                 Log.v(pluginName, "Already Granted")
                 PERMISSION_RESULT_GRANTED
             }
             else -> {
                 Log.v(pluginName, "Already Denied")
-                val showRationale = currentActivity.shouldShowRequestPermissionRationale(permission)
+                val showRationale = currentActivity.shouldShowRequestPermissionRationale(permissionRequired)
                 if (showRationale)
                     PERMISSION_RESULT_DENIED_SHOW_RATIONALE
                 else
@@ -70,12 +73,11 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
     }
 
     /**
-     * Launches the permission request launcher for the given permission string
-     * @param permission one of string value as specified in [Manifest.permission]
+     * Launches the permission request launcher for android.permission.ACTIVITY_RECOGNITION
      */
     @UsedByGodot
-    fun requestPermissionString(permission: String) {
-        currentActivity.requestPermissions(arrayOf(permission), RC_CODE)
+    fun requestRequiredPermissions() {
+        currentActivity.requestPermissions(arrayOf(permissionRequired), RC_CODE)
     }
 
     /**
@@ -108,6 +110,9 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
         }
     }
 
+    /**
+     * Registers the app to start tracking the steps.
+     */
     @RequiresPermission(Manifest.permission.ACTIVITY_RECOGNITION)
     @UsedByGodot
     fun subscibeToFitnessData() {
@@ -121,11 +126,15 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
             }
     }
 
-    // Gets the amount of steps taken since TIME and emits a signal with the result
+    /**
+     * Gets the amount of steps taken in the last numSeconds and emits a signal with the result
+     * subcribeToFitnessData MUST be called first
+     * @param numSeconds the number of seconds to fetch the steps data from
+     */
     @UsedByGodot
-    fun getSteps() {
+    fun getStepsInLastSeconds(numSeconds: Int) {
         val endTime = LocalDateTime.now().atZone(ZoneId.systemDefault())
-        val startTime = endTime.minusWeeks(1)
+        val startTime = endTime.minusSeconds(numSeconds.toLong())
 
         var totalSteps = 0
         try {
@@ -139,7 +148,7 @@ class GodotAndroidPlugin(godot: Godot): GodotPlugin(godot) {
                 for (dataSet in response.dataSets) {
                     totalSteps += dataSet.dataPoints.sumOf { it.getValue(LocalField.FIELD_STEPS).asInt() }
                 }
-//                Log.i(pluginName, "Total steps: $totalSteps")
+                Log.i(pluginName, "Total steps: $totalSteps")
                 emitSignal(
                     SIGNAL_TOTAL_STEPS_RETRIEVED,
                     totalSteps

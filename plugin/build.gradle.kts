@@ -5,9 +5,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-val pluginName = "RPGGameAndroidPlugin"
+val pluginName = "StepCounterAndroidPlugin"
 
-val pluginPackageName = "com.lachlanroberts.plugin.rpggame"
+val pluginPackageName = "com.lachlanroberts.plugin.stepcounter"
 
 android {
     namespace = pluginPackageName

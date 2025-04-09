@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "RPGGameAndroidPlugin"
+rootProject.name = "StepCounterAndroidPlugin"
 include(":plugin")
