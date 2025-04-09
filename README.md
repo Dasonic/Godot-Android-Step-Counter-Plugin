@@ -17,7 +17,7 @@ You can install the latest version from https://developer.android.com/studio.
 ./gradlew assemble
 ```
 - On successful completion of the build, the output files can be found in
-  [`plugin//addons`](plugin/addons)
+  [`plugin/addons`](plugin/addons)
 
 ### Running the Android plugin
 - Open your project in Godot (4.2 or higher)
