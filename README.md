@@ -46,6 +46,8 @@ func _ready():
       
       # Start recording steps
       android_step_plugin.subscibeToFitnessData()
+      # Connect the signal for returning the number of steps
+      android_step_plugin.total_steps_retrieved.connect(_total_steps_retrieved)
       
       # Check the number of steps after a minute
       await get_tree().create_timer(60).timeout
@@ -54,6 +56,10 @@ func _ready():
       printerr("Couldn't find plugin " + _plugin_name)
       
 func get_steps_in_last_seconds(numSeconds):
-  return android_step_plugin.getStepsInLastSeconds(numSeconds)
+  # Async call to get the steps, returns results via total_steps_retrieved signal
+  android_step_plugin.getStepsInLastSeconds(numSeconds)
+
+func _total_steps_retrieved(total_steps):
+  print(total_steps)
 ```
 
