@@ -51,11 +51,11 @@ func _ready():
       
       # Check the number of steps after a minute
       await get_tree().create_timer(60).timeout
-      print(get_steps_in_last_seconds(60))
+      request_steps_in_last_seconds(60)
   else:
       printerr("Couldn't find plugin " + _plugin_name)
       
-func get_steps_in_last_seconds(numSeconds):
+func request_steps_in_last_seconds(numSeconds):
   # Async call to get the steps, returns results via total_steps_retrieved signal
   android_step_plugin.getStepsInLastSeconds(numSeconds)
 
