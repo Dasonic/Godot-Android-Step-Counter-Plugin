@@ -21,7 +21,7 @@ You can install the latest version from https://developer.android.com/studio.
 
 ### Running the Android plugin
 - Open your project in Godot (4.2 or higher)
-- Copy the plugin into your project (e.g. /addons/StepCounterAndroidPlugin)
+- Extract the plugin into your project (e.g. /addons/StepCounterAndroidPlugin)
 - Navigate to `Project` -> `Project Settings...` -> `Plugins`, and ensure the plugin is enabled
 - Install the Godot Android build template by clicking on `Project` -> `Install Android Build Template...`
 - Update your Android export preset min SDK to `26` or higher by clicking on `Project` -> `Export...` -> `Min SDK`
